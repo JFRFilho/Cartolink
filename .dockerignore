@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+!.env.example
+venv/
+__pycache__/
+app/__pycache__/
+config/credentials.json
+config/token.json
+temp_uploads/
+*.pyc
+*.pyo
+*.pyd

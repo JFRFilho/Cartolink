@@ -4,6 +4,7 @@
 # ── Web Framework ─────────────────────────────────────────────
 Flask==3.0.3
 flask-cors==4.0.1
+gunicorn==22.0.0
 
 # ── Google Drive API ──────────────────────────────────────────
 google-api-python-client==2.131.0

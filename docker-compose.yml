@@ -1,0 +1,11 @@
+services:
+  cartlink:
+    build: .
+    container_name: cartlink
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-5000}:${PORT:-5000}"
+    volumes:
+      - ./temp_uploads:/app/temp_uploads

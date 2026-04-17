@@ -4,3 +4,4 @@ config/token.json
 venv/
 __pycache__/
 app/__pycache__/
+temp_uploads/

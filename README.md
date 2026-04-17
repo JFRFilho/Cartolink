@@ -263,3 +263,57 @@ MIT — use livremente para projetos pessoais e corporativos.
 ---
 
 *Desenvolvido com Flask, Google Drive API v3 e muito café ☕*
+---
+
+## Docker
+
+O projeto agora pode ser executado em container com `Dockerfile` e `docker-compose.yml`.
+
+### Subir localmente com Docker
+
+```bash
+cp .env.example .env
+
+# ajuste sua .env
+docker compose up --build -d
+```
+
+Abra no navegador em `http://localhost:5000`.
+
+Se sua `.env` usar outra porta, o compose respeitara o valor de `PORT`.
+
+### Ubuntu 24.04
+
+Depois de clonar o projeto no servidor:
+
+```bash
+sudo apt update
+sudo apt install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+
+cd cartlink
+cp .env.example .env
+nano .env
+
+docker compose up --build -d
+docker compose logs -f
+```
+
+Para atualizar depois de um `git pull`:
+
+```bash
+docker compose up --build -d
+```
+
+Para parar:
+
+```bash
+docker compose down
+```
+
+### Observacoes importantes
+
+- A imagem nao copia `.env`, `config/credentials.json` nem `config/token.json`.
+- O container usa as credenciais via variaveis de ambiente, que e o fluxo mais seguro para deploy.
+- O diretorio `temp_uploads/` fica montado como volume para uploads temporarios.
+- A `OAUTH_REDIRECT_URI` da `.env` precisa bater exatamente com a URI cadastrada no Google Cloud para o ambiente Ubuntu.
