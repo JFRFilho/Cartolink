@@ -25,6 +25,17 @@ drive_bp = Blueprint('drive', __name__)
 upload_status = {}
 
 
+def _has_admin_access():
+    """Validate access to admin-only setup routes."""
+    expected_key = os.getenv('ADMIN_SETUP_KEY')
+    provided_key = request.args.get('key') or request.headers.get('X-Admin-Setup-Key')
+
+    if not expected_key:
+        return False
+
+    return provided_key == expected_key
+
+
 def allowed_file(filename):
     """Check if file extension is allowed"""
     allowed = current_app.config.get('ALLOWED_EXTENSIONS', set())
@@ -37,13 +48,16 @@ def allowed_file(filename):
 def index():
     """Main page"""
     creds = load_credentials()
-    authenticated = creds is not None and creds.valid
-    return render_template('index.html', authenticated=authenticated)
+    drive_ready = creds is not None and creds.valid
+    return render_template('index.html', drive_ready=drive_ready)
 
 
 @main_bp.route('/auth/google')
 def google_auth():
     """Redirect user to Google OAuth consent screen"""
+    if not _has_admin_access():
+        return jsonify({'error': 'Admin access required'}), 403
+
     auth_url, state = get_auth_url()
     session['oauth_state'] = state
     return redirect(auth_url)
@@ -56,21 +70,24 @@ def google_callback():
     error = request.args.get('error')
 
     if error:
-        return render_template('index.html', auth_error=error, authenticated=False)
+        return render_template('index.html', auth_error=error, drive_ready=False)
 
     if not code:
-        return render_template('index.html', auth_error='No authorization code received', authenticated=False)
+        return render_template('index.html', auth_error='No authorization code received', drive_ready=False)
 
     try:
         exchange_code_for_credentials(code)
         return redirect(url_for('main.index'))
     except Exception as e:
-        return render_template('index.html', auth_error=str(e), authenticated=False)
+        return render_template('index.html', auth_error=str(e), drive_ready=False)
 
 
 @main_bp.route('/auth/status')
 def auth_status():
     """Check authentication status"""
+    if not _has_admin_access():
+        return jsonify({'error': 'Admin access required'}), 403
+
     creds = load_credentials()
     if creds and creds.valid:
         return jsonify({'authenticated': True})
@@ -87,6 +104,14 @@ def auth_status():
 @main_bp.route('/auth/logout')
 def logout():
     """Remove stored credentials"""
+    if not _has_admin_access():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    if os.getenv('GOOGLE_OAUTH_TOKEN') or os.getenv('GOOGLE_OAUTH_REFRESH_TOKEN'):
+        return jsonify({
+            'error': 'As credenciais estao configuradas via .env. Remova GOOGLE_OAUTH_TOKEN e GOOGLE_OAUTH_REFRESH_TOKEN manualmente para desconectar.'
+        }), 400
+
     token_path = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
         'config', 'token.json'
@@ -101,10 +126,15 @@ def logout():
 @drive_bp.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and send to Google Drive"""
-    # Validate authentication
+    # Validate server-side Google Drive credentials
     creds = load_credentials()
     if not creds or not creds.valid:
-        return jsonify({'error': 'Not authenticated. Please connect to Google Drive first.'}), 401
+        return jsonify({
+            'error': (
+                'Servico temporariamente indisponivel. '
+                'A conta principal do Google Drive nao esta configurada no servidor.'
+            )
+        }), 503
 
     # Validate file presence
     if 'file' not in request.files:
