@@ -1,0 +1,203 @@
+/* CartLink - Custom Styles */
+
+/* ── Typography ──────────────────────────────────────────────── */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Background Grid ─────────────────────────────────────────── */
+#bg-grid {
+  background-image:
+    linear-gradient(rgba(30, 79, 216, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 79, 216, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Radial gradient overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60vh;
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(30, 79, 216, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Text Gradient ───────────────────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, #4b7cf3 0%, #1e4fd8 50%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Card Surface ────────────────────────────────────────────── */
+.card-surface {
+  background: rgba(15, 30, 56, 0.8);
+  border: 1px solid rgba(26, 48, 84, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Drop Zone ───────────────────────────────────────────────── */
+.drop-zone {
+  background: rgba(10, 22, 40, 0.6);
+  transition: all 0.25s ease;
+}
+
+.drop-zone:hover {
+  background: rgba(30, 79, 216, 0.05);
+}
+
+.drop-zone.drag-over {
+  background: rgba(30, 79, 216, 0.1);
+  border-color: #1e4fd8;
+}
+
+.drag-overlay {
+  display: none;
+}
+
+.drop-zone.drag-over .drag-overlay {
+  display: flex;
+}
+
+/* ── Upload Button ───────────────────────────────────────────── */
+.upload-btn {
+  background: linear-gradient(135deg, #1e4fd8 0%, #1a44c4 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 20px rgba(30, 79, 216, 0.3);
+}
+
+.upload-btn:not(:disabled):hover {
+  background: linear-gradient(135deg, #2558e8 0%, #1e4fd8 100%);
+  box-shadow: 0 6px 28px rgba(30, 79, 216, 0.45);
+  transform: translateY(-1px);
+}
+
+.upload-btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* ── Step Indicators ─────────────────────────────────────────── */
+.step-item[data-active="true"] .step-dot {
+  background: rgba(30, 79, 216, 0.2);
+  border-color: #1e4fd8;
+  box-shadow: 0 0 12px rgba(30, 79, 216, 0.4);
+}
+
+.step-item[data-active="true"] .step-dot i {
+  color: #4b7cf3 !important;
+}
+
+.step-item[data-active="true"] > span {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.step-item[data-done="true"] .step-dot {
+  background: rgba(16, 201, 122, 0.15);
+  border-color: #10c97a;
+}
+
+.step-item[data-done="true"] .step-dot i {
+  color: #10c97a !important;
+}
+
+.step-item[data-done="true"] > span {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.step-item[data-error="true"] .step-dot {
+  background: rgba(240, 64, 96, 0.15);
+  border-color: #f04060;
+}
+
+.step-item[data-error="true"] .step-dot i {
+  color: #f04060 !important;
+}
+
+/* ── Progress Bar ────────────────────────────────────────────── */
+#progressBar {
+  background: linear-gradient(90deg, #1e4fd8, #4b7cf3, #1e4fd8);
+  background-size: 200% 100%;
+  animation: progress-shimmer 2s linear infinite;
+}
+
+@keyframes progress-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Pulse Dot ───────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(16, 201, 122, 0.5); }
+  50% { opacity: 0.6; box-shadow: 0 0 8px rgba(16, 201, 122, 0.8); }
+}
+
+.animate-pulse {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Copy Success ────────────────────────────────────────────── */
+.copy-success {
+  background: rgba(16, 201, 122, 0.1) !important;
+  border-color: rgba(16, 201, 122, 0.3) !important;
+  color: #10c97a !important;
+}
+
+/* ── Fade In Animation ───────────────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+/* ── Spinning Animation ──────────────────────────────────────── */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-slow {
+  animation: spin-slow 1.2s linear infinite;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #040d1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a3054;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1e4fd8;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 2rem !important;
+    line-height: 1.2 !important;
+  }
+}
