@@ -8,4 +8,5 @@ services:
     ports:
       - "${PORT:-5000}:${PORT:-5000}"
     volumes:
+      - ./config:/app/config
       - ./temp_uploads:/app/temp_uploads

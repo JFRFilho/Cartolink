@@ -79,6 +79,7 @@ def google_callback():
         exchange_code_for_credentials(code)
         return redirect(url_for('main.index'))
     except Exception as e:
+        current_app.logger.exception("Google OAuth callback failed")
         return render_template('index.html', auth_error=str(e), drive_ready=False)
 
 
@@ -89,16 +90,7 @@ def auth_status():
         return jsonify({'error': 'Admin access required'}), 403
 
     creds = load_credentials()
-    if creds and creds.valid:
-        return jsonify({'authenticated': True})
-    elif creds and creds.expired and creds.refresh_token:
-        try:
-            from google.auth.transport.requests import Request
-            creds.refresh(Request())
-            return jsonify({'authenticated': True})
-        except Exception:
-            return jsonify({'authenticated': False})
-    return jsonify({'authenticated': False})
+    return jsonify({'authenticated': bool(creds and creds.valid)})
 
 
 @main_bp.route('/auth/logout')
@@ -219,6 +211,7 @@ def process_upload(upload_id, temp_path, filename, creds, app):
             })
 
         except Exception as e:
+            app.logger.exception("Upload %s failed while generating Drive link", upload_id)
             upload_status[upload_id].update({
                 'status': 'error',
                 'message': f'Error: {str(e)}',

@@ -13,6 +13,7 @@ Flow:
 
 import os
 import json
+from datetime import datetime, timezone
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -88,6 +89,7 @@ def _load_token_data_from_env() -> dict | None:
     """Load saved OAuth token data from environment variables."""
     token = os.getenv('GOOGLE_OAUTH_TOKEN')
     refresh_token = os.getenv('GOOGLE_OAUTH_REFRESH_TOKEN')
+    expiry = os.getenv('GOOGLE_OAUTH_EXPIRY')
 
     if not token and not refresh_token:
         return None
@@ -99,8 +101,32 @@ def _load_token_data_from_env() -> dict | None:
         'token_uri': os.getenv('GOOGLE_TOKEN_URI', 'https://oauth2.googleapis.com/token'),
         'client_id': os.getenv('GOOGLE_CLIENT_ID'),
         'client_secret': os.getenv('GOOGLE_CLIENT_SECRET'),
-        'scopes': [scope.strip() for scope in scopes.split(',')] if scopes else SCOPES
+        'scopes': [scope.strip() for scope in scopes.split(',')] if scopes else SCOPES,
+        'expiry': expiry
     }
+
+
+def _load_token_data_from_file() -> dict | None:
+    """Load saved OAuth token data from token.json."""
+    if not os.path.exists(TOKEN_PATH):
+        return None
+
+    with open(TOKEN_PATH, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def _parse_expiry(value: str | None) -> datetime | None:
+    """Parse a saved OAuth expiry timestamp."""
+    if not value:
+        return None
+
+    try:
+        expiry = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        if expiry.tzinfo:
+            expiry = expiry.astimezone(timezone.utc).replace(tzinfo=None)
+        return expiry
+    except ValueError:
+        return None
 
 
 def _save_env_value(lines: list[str], key: str, value: str) -> list[str]:
@@ -134,7 +160,8 @@ def _save_credentials_to_env(credentials: Credentials) -> None:
         'GOOGLE_TOKEN_URI': credentials.token_uri or os.getenv('GOOGLE_TOKEN_URI', 'https://oauth2.googleapis.com/token'),
         'GOOGLE_OAUTH_TOKEN': credentials.token or '',
         'GOOGLE_OAUTH_REFRESH_TOKEN': credentials.refresh_token or os.getenv('GOOGLE_OAUTH_REFRESH_TOKEN', ''),
-        'GOOGLE_OAUTH_SCOPES': ','.join(credentials.scopes) if credentials.scopes else ','.join(SCOPES)
+        'GOOGLE_OAUTH_SCOPES': ','.join(credentials.scopes) if credentials.scopes else ','.join(SCOPES),
+        'GOOGLE_OAUTH_EXPIRY': credentials.expiry.isoformat() if credentials.expiry else ''
     }
 
     for key, value in env_updates.items():
@@ -196,34 +223,43 @@ def load_credentials() -> Credentials | None:
     Returns:
         Valid Credentials object, or None if not authenticated
     """
-    try:
-        token_data = _load_token_data_from_env()
-        if not token_data:
-            if not os.path.exists(TOKEN_PATH):
-                return None
+    token_sources = (
+        ('token.json', _load_token_data_from_file),
+        ('.env', _load_token_data_from_env),
+    )
 
-            with open(TOKEN_PATH, 'r') as f:
-                token_data = json.load(f)
+    for source_name, load_token_data in token_sources:
+        try:
+            token_data = load_token_data()
+            if not token_data:
+                continue
 
-        credentials = Credentials(
-            token=token_data.get('token'),
-            refresh_token=token_data.get('refresh_token'),
-            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-            client_id=token_data.get('client_id'),
-            client_secret=token_data.get('client_secret'),
-            scopes=token_data.get('scopes')
-        )
+            credentials = Credentials(
+                token=token_data.get('token'),
+                refresh_token=token_data.get('refresh_token'),
+                token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                client_id=token_data.get('client_id'),
+                client_secret=token_data.get('client_secret'),
+                scopes=token_data.get('scopes'),
+                expiry=_parse_expiry(token_data.get('expiry'))
+            )
 
-        # Refresh if expired
-        if credentials.expired and credentials.refresh_token:
-            credentials.refresh(Request())
-            _save_credentials(credentials)
+            # Older saved tokens did not include expiry, so verify them with Google
+            # instead of treating a stale access token as valid forever.
+            has_expiry = bool(token_data.get('expiry'))
+            if (credentials.expired or not credentials.valid or not has_expiry) and credentials.refresh_token:
+                credentials.refresh(Request())
+                _save_credentials(credentials)
+            elif not has_expiry:
+                continue
 
-        return credentials
+            if credentials.valid:
+                return credentials
 
-    except Exception as e:
-        print(f"[CartLink] Error loading credentials: {e}")
-        return None
+        except Exception as e:
+            print(f"[CartLink] Error loading credentials from {source_name}: {e}", flush=True)
+
+    return None
 
 
 def _save_credentials(credentials: Credentials) -> None:
@@ -241,7 +277,8 @@ def _save_credentials(credentials: Credentials) -> None:
         'token_uri': credentials.token_uri,
         'client_id': credentials.client_id,
         'client_secret': credentials.client_secret,
-        'scopes': list(credentials.scopes) if credentials.scopes else SCOPES
+        'scopes': list(credentials.scopes) if credentials.scopes else SCOPES,
+        'expiry': credentials.expiry.isoformat() if credentials.expiry else None
     }
 
     with open(TOKEN_PATH, 'w') as f:
