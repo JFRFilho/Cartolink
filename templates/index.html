@@ -74,20 +74,11 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full {% if drive_ready %}bg-accent-green/10 border border-accent-green/30{% else %}bg-accent-red/10 border border-accent-red/30{% endif %}">
-          <div class="w-2 h-2 rounded-full {% if drive_ready %}bg-accent-green{% else %}bg-accent-red{% endif %}"></div>
-          <span class="text-xs font-medium {% if drive_ready %}text-accent-green{% else %}text-accent-red{% endif %}">
-            {% if drive_ready %}Servico online{% else %}Servico em configuracao{% endif %}
-          </span>
-        </div>
-        {% if local_google_test_mode %}
-        <a href="{{ url_for('main.google_auth') }}"
-           class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-blue-50 text-xs font-medium text-slate-700 hover:text-brand-blue transition-colors">
-          <i data-lucide="{% if drive_ready %}refresh-cw{% else %}key-round{% endif %}" class="w-3.5 h-3.5"></i>
-          {% if drive_ready %}Trocar conta{% else %}Conectar{% endif %}
-        </a>
-        {% endif %}
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full {% if drive_ready %}bg-accent-green/10 border border-accent-green/30{% else %}bg-accent-red/10 border border-accent-red/30{% endif %}">
+        <div class="w-2 h-2 rounded-full {% if drive_ready %}bg-accent-green{% else %}bg-accent-red{% endif %}"></div>
+        <span class="text-xs font-medium {% if drive_ready %}text-accent-green{% else %}text-accent-red{% endif %}">
+          {% if drive_ready %}Servico online{% else %}Servico em configuracao{% endif %}
+        </span>
       </div>
     </div>
   </header>
@@ -130,23 +121,10 @@
               <i data-lucide="alert-triangle" class="w-5 h-5 text-accent-yellow"></i>
             </div>
             <div class="flex-1">
-              <h3 class="font-semibold text-slate-900 mb-1">
-                {% if local_google_test_mode %}Conta Google local ainda nao configurada{% else %}Conta principal ainda nao configurada{% endif %}
-              </h3>
+              <h3 class="font-semibold text-slate-900 mb-1">Conta principal ainda nao configurada</h3>
               <p class="text-sm text-slate-600">
-                {% if local_google_test_mode %}
-                Escolha a conta Google que vai receber os arquivos durante este teste local.
-                {% else %}
                 O CartoLink 2.0 usa uma conta fixa do Google Drive no servidor. Finalize a autorizacao inicial no backend para liberar os uploads para todos os usuarios.
-                {% endif %}
               </p>
-              {% if local_google_test_mode %}
-              <a href="{{ url_for('main.google_auth') }}"
-                 class="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-blue hover:bg-brand-glow text-sm font-semibold text-white transition-colors shadow-glow-sm">
-                <i data-lucide="key-round" class="w-4 h-4"></i>
-                Conectar Google local
-              </a>
-              {% endif %}
             </div>
           </div>
         </div>
