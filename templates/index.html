@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CartoLink - Drive File Sharing</title>
+  <title>CartoLink 2.0 - Drive File Sharing</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -69,16 +69,25 @@
           <img src="/static/images/Logo_Bola.png" alt="CartoLink" class="w-full h-full object-cover" />
         </div>
         <div>
-          <span class="text-xl font-bold tracking-tight text-slate-900">Carto<span class="text-brand-blue">Link</span></span>
+          <span class="text-xl font-bold tracking-tight text-slate-900">Carto<span class="text-brand-blue">Link</span> 2.0</span>
           <p class="text-xs text-slate-500 font-mono -mt-0.5 tracking-widest uppercase">Drive Sharing</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full {% if drive_ready %}bg-accent-green/10 border border-accent-green/30{% else %}bg-accent-red/10 border border-accent-red/30{% endif %}">
-        <div class="w-2 h-2 rounded-full {% if drive_ready %}bg-accent-green{% else %}bg-accent-red{% endif %}"></div>
-        <span class="text-xs font-medium {% if drive_ready %}text-accent-green{% else %}text-accent-red{% endif %}">
-          {% if drive_ready %}Servico online{% else %}Servico em configuracao{% endif %}
-        </span>
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full {% if drive_ready %}bg-accent-green/10 border border-accent-green/30{% else %}bg-accent-red/10 border border-accent-red/30{% endif %}">
+          <div class="w-2 h-2 rounded-full {% if drive_ready %}bg-accent-green{% else %}bg-accent-red{% endif %}"></div>
+          <span class="text-xs font-medium {% if drive_ready %}text-accent-green{% else %}text-accent-red{% endif %}">
+            {% if drive_ready %}Servico online{% else %}Servico em configuracao{% endif %}
+          </span>
+        </div>
+        {% if local_google_test_mode %}
+        <a href="{{ url_for('main.google_auth') }}"
+           class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-blue-50 text-xs font-medium text-slate-700 hover:text-brand-blue transition-colors">
+          <i data-lucide="{% if drive_ready %}refresh-cw{% else %}key-round{% endif %}" class="w-3.5 h-3.5"></i>
+          {% if drive_ready %}Trocar conta{% else %}Conectar{% endif %}
+        </a>
+        {% endif %}
       </div>
     </div>
   </header>
@@ -100,6 +109,20 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div class="lg:col-span-3 space-y-4">
+        {% if auth_error %}
+        <div class="card-surface rounded-2xl p-6 border border-accent-red/20 bg-accent-red/5">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-xl bg-accent-red/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i data-lucide="alert-circle" class="w-5 h-5 text-accent-red"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-slate-900 mb-1">Falha ao conectar o Google</h3>
+              <p class="text-sm text-slate-600 break-words">{{ auth_error }}</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
         {% if not drive_ready %}
         <div class="card-surface rounded-2xl p-6 border border-accent-yellow/20 bg-accent-yellow/5">
           <div class="flex items-start gap-4">
@@ -107,10 +130,23 @@
               <i data-lucide="alert-triangle" class="w-5 h-5 text-accent-yellow"></i>
             </div>
             <div class="flex-1">
-              <h3 class="font-semibold text-slate-900 mb-1">Conta principal ainda nao configurada</h3>
+              <h3 class="font-semibold text-slate-900 mb-1">
+                {% if local_google_test_mode %}Conta Google local ainda nao configurada{% else %}Conta principal ainda nao configurada{% endif %}
+              </h3>
               <p class="text-sm text-slate-600">
-                O CartLink usa uma conta fixa do Google Drive no servidor. Finalize a autorizacao inicial no backend para liberar os uploads para todos os usuarios.
+                {% if local_google_test_mode %}
+                Escolha a conta Google que vai receber os arquivos durante este teste local.
+                {% else %}
+                O CartoLink 2.0 usa uma conta fixa do Google Drive no servidor. Finalize a autorizacao inicial no backend para liberar os uploads para todos os usuarios.
+                {% endif %}
               </p>
+              {% if local_google_test_mode %}
+              <a href="{{ url_for('main.google_auth') }}"
+                 class="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-blue hover:bg-brand-glow text-sm font-semibold text-white transition-colors shadow-glow-sm">
+                <i data-lucide="key-round" class="w-4 h-4"></i>
+                Conectar Google local
+              </a>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -300,7 +336,7 @@
 
   <footer class="relative z-10 border-t border-slate-200 mt-16">
     <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
-      <span class="text-xs text-slate-400 font-mono">CartoLink v1.0 - Google Drive API</span>
+      <span class="text-xs text-slate-400 font-mono">CartoLink 2.0 - Google Drive API</span>
       <span class="text-xs text-slate-400">Ferramenta corporativa de compartilhamento</span>
     </div>
   </footer>

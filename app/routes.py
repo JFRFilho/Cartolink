@@ -15,7 +15,12 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from app.drive_service import DriveService
-from app.auth import get_auth_url, exchange_code_for_credentials, load_credentials
+from app.auth import (
+    get_auth_url,
+    exchange_code_for_credentials,
+    is_local_google_test_mode,
+    load_credentials,
+)
 
 # Blueprints
 main_bp = Blueprint('main', __name__)
@@ -27,6 +32,9 @@ upload_status = {}
 
 def _has_admin_access():
     """Validate access to admin-only setup routes."""
+    if is_local_google_test_mode() and _is_local_request():
+        return True
+
     expected_key = os.getenv('ADMIN_SETUP_KEY')
     provided_key = request.args.get('key') or request.headers.get('X-Admin-Setup-Key')
 
@@ -34,6 +42,14 @@ def _has_admin_access():
         return False
 
     return provided_key == expected_key
+
+
+def _is_local_request():
+    """Allow local setup shortcuts only from the machine running Flask."""
+    host = (request.host or '').split(':', 1)[0].strip('[]').lower()
+    remote_addr = request.remote_addr or ''
+
+    return host in {'localhost', '127.0.0.1', '::1'} or remote_addr in {'127.0.0.1', '::1'}
 
 
 def allowed_file(filename):
@@ -49,7 +65,11 @@ def index():
     """Main page"""
     creds = load_credentials()
     drive_ready = creds is not None and creds.valid
-    return render_template('index.html', drive_ready=drive_ready)
+    return render_template(
+        'index.html',
+        drive_ready=drive_ready,
+        local_google_test_mode=is_local_google_test_mode()
+    )
 
 
 @main_bp.route('/auth/google')
@@ -70,17 +90,32 @@ def google_callback():
     error = request.args.get('error')
 
     if error:
-        return render_template('index.html', auth_error=error, drive_ready=False)
+        return render_template(
+            'index.html',
+            auth_error=error,
+            drive_ready=False,
+            local_google_test_mode=is_local_google_test_mode()
+        )
 
     if not code:
-        return render_template('index.html', auth_error='No authorization code received', drive_ready=False)
+        return render_template(
+            'index.html',
+            auth_error='No authorization code received',
+            drive_ready=False,
+            local_google_test_mode=is_local_google_test_mode()
+        )
 
     try:
         exchange_code_for_credentials(code)
         return redirect(url_for('main.index'))
     except Exception as e:
         current_app.logger.exception("Google OAuth callback failed")
-        return render_template('index.html', auth_error=str(e), drive_ready=False)
+        return render_template(
+            'index.html',
+            auth_error=str(e),
+            drive_ready=False,
+            local_google_test_mode=is_local_google_test_mode()
+        )
 
 
 @main_bp.route('/auth/status')
@@ -99,7 +134,10 @@ def logout():
     if not _has_admin_access():
         return jsonify({'error': 'Admin access required'}), 403
 
-    if os.getenv('GOOGLE_OAUTH_TOKEN') or os.getenv('GOOGLE_OAUTH_REFRESH_TOKEN'):
+    if (
+        not is_local_google_test_mode()
+        and (os.getenv('GOOGLE_OAUTH_TOKEN') or os.getenv('GOOGLE_OAUTH_REFRESH_TOKEN'))
+    ):
         return jsonify({
             'error': 'As credenciais estao configuradas via .env. Remova GOOGLE_OAUTH_TOKEN e GOOGLE_OAUTH_REFRESH_TOKEN manualmente para desconectar.'
         }), 400
@@ -121,11 +159,19 @@ def upload_file():
     # Validate server-side Google Drive credentials
     creds = load_credentials()
     if not creds or not creds.valid:
-        return jsonify({
-            'error': (
+        if is_local_google_test_mode():
+            message = (
+                'Conta Google local ainda nao configurada. '
+                'Conecte em http://localhost:5000/auth/google e tente novamente.'
+            )
+        else:
+            message = (
                 'Servico temporariamente indisponivel. '
                 'A conta principal do Google Drive nao esta configurada no servidor.'
             )
+
+        return jsonify({
+            'error': message
         }), 503
 
     # Validate file presence

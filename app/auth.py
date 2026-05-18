@@ -8,7 +8,7 @@ Flow:
   3. Google redirects back with ?code=...
   4. App exchanges code for tokens (exchange_code_for_credentials)
   5. Tokens are saved locally in config/token.json
-  6. Subsequent requests load credentials from .env or token.json
+  6. Local test requests load credentials from token.json
 """
 
 import os
@@ -22,6 +22,7 @@ from google.auth.transport.requests import Request
 SCOPES = [
     'https://www.googleapis.com/auth/drive.file',  # Create/manage files uploaded by this app
     'https://www.googleapis.com/auth/userinfo.email',  # Get user email (optional, for display)
+    'https://www.googleapis.com/auth/userinfo.profile',
     'openid'
 ]
 
@@ -30,6 +31,25 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CREDENTIALS_PATH = os.path.join(BASE_DIR, 'config', 'credentials.json')
 TOKEN_PATH = os.path.join(BASE_DIR, 'config', 'token.json')
 ENV_PATH = os.path.join(BASE_DIR, '.env')
+
+
+def _env_bool(key: str, default: bool = False) -> bool:
+    """Read a permissive boolean value from environment variables."""
+    value = os.getenv(key)
+    if value is None:
+        return default
+
+    return value.strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
+
+
+def is_local_google_test_mode() -> bool:
+    """Use file-only auth storage while running the local test app."""
+    return _env_bool('LOCAL_GOOGLE_TEST_MODE', _env_bool('FLASK_DEBUG', False))
+
+
+def _should_save_credentials_to_env() -> bool:
+    """Keep production env-token support, but avoid mutating .env in local tests."""
+    return _env_bool('GOOGLE_SAVE_TOKEN_TO_ENV', not is_local_google_test_mode())
 
 
 def _get_redirect_uri():
@@ -64,6 +84,9 @@ def _get_env_client_config() -> dict | None:
 
 def _build_flow() -> Flow:
     """Create an OAuth flow using env vars when available, otherwise credentials.json."""
+    if is_local_google_test_mode():
+        os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+
     env_client_config = _get_env_client_config()
     if env_client_config:
         return Flow.from_client_config(
@@ -223,10 +246,13 @@ def load_credentials() -> Credentials | None:
     Returns:
         Valid Credentials object, or None if not authenticated
     """
-    token_sources = (
-        ('token.json', _load_token_data_from_file),
-        ('.env', _load_token_data_from_env),
-    )
+    if is_local_google_test_mode():
+        token_sources = (('token.json', _load_token_data_from_file),)
+    else:
+        token_sources = (
+            ('token.json', _load_token_data_from_file),
+            ('.env', _load_token_data_from_env),
+        )
 
     for source_name, load_token_data in token_sources:
         try:
@@ -284,5 +310,7 @@ def _save_credentials(credentials: Credentials) -> None:
     with open(TOKEN_PATH, 'w') as f:
         json.dump(token_data, f, indent=2)
 
-    _save_credentials_to_env(credentials)
+    if _should_save_credentials_to_env():
+        _save_credentials_to_env(credentials)
+
     print(f"[CartLink] Credentials saved to {TOKEN_PATH}")
